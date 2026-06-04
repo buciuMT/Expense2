@@ -77,11 +77,13 @@ const resolvers = {
     reportByCategory: requireAuth()(async (_, { startDate, endDate }, { user }) => {
       const where = { date: { [Op.between]: [startDate, endDate] } };
       if (user.role !== 'admin') where.userId = user.id;
-      const expenses = await Expense.findAll({ where, include: [Category] });
+      const expenses = await Expense.findAll({ where, include: [{ model: Category }] });
       const map = {};
       for (const exp of expenses) {
-        const key = exp.categoryId;
-        if (!map[key]) map[key] = { category: exp.category, total: 0, count: 0 };
+        const cat = exp.Category || exp.category;
+        if (!cat) continue;
+        const key = cat.id;
+        if (!map[key]) map[key] = { category: cat, total: 0, count: 0 };
         map[key].total += exp.amount;
         map[key].count += 1;
       }
@@ -232,16 +234,20 @@ const resolvers = {
 
   Budget: {
     spent: async (parent) => {
+      const [year, m] = parent.month.split('-').map(Number);
+      const lastDay = new Date(year, m, 0).getDate();
       const startDate = parent.month + '-01';
-      const endDate = parent.month + '-31';
+      const endDate = parent.month + '-' + String(lastDay).padStart(2, '0');
       const expenses = await Expense.findAll({
         where: { userId: parent.userId, categoryId: parent.categoryId, date: { [Op.between]: [startDate, endDate] } },
       });
       return expenses.reduce((sum, e) => sum + e.amount, 0);
     },
     remaining: async (parent) => {
+      const [year, m] = parent.month.split('-').map(Number);
+      const lastDay = new Date(year, m, 0).getDate();
       const startDate = parent.month + '-01';
-      const endDate = parent.month + '-31';
+      const endDate = parent.month + '-' + String(lastDay).padStart(2, '0');
       const expenses = await Expense.findAll({
         where: { userId: parent.userId, categoryId: parent.categoryId, date: { [Op.between]: [startDate, endDate] } },
       });
