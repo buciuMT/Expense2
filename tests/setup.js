@@ -1,47 +1,15 @@
-const { Sequelize } = require('sequelize');
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgres://postgres:postgres@localhost:5433/expense_test';
+
+const sequelize = require('../src/db');
 const { User, UserProfile, Category, Expense, Tag, Budget } = require('../src/models');
 const typeDefs = require('../src/schema/typeDefs');
 const resolvers = require('../src/schema/resolvers');
 const authMiddleware = require('../src/middleware/auth');
 const createApp = require('../src/app');
 const request = require('supertest');
+const bcrypt = require('bcryptjs');
 
 let app;
-let sequelize;
-
-const initTestDb = async () => {
-  const dbUrl = process.env.TEST_DATABASE_URL || 'postgres://postgres:postgres@localhost:5433/expense_test';
-  sequelize = new Sequelize(dbUrl, { dialect: 'postgres', logging: false });
-  return sequelize;
-};
-
-const setupModels = async () => {
-  User.init(User.rawAttributes, { sequelize, modelName: 'User', tableName: 'users', timestamps: true });
-  UserProfile.init(UserProfile.rawAttributes, { sequelize, modelName: 'UserProfile', tableName: 'user_profiles', timestamps: true });
-  Category.init(Category.rawAttributes, { sequelize, modelName: 'Category', tableName: 'categories', timestamps: true });
-  Expense.init(Expense.rawAttributes, { sequelize, modelName: 'Expense', tableName: 'expenses', timestamps: true });
-  Tag.init(Tag.rawAttributes, { sequelize, modelName: 'Tag', tableName: 'tags', timestamps: true });
-  Budget.init(Budget.rawAttributes, { sequelize, modelName: 'Budget', tableName: 'budgets', timestamps: true });
-
-  User.hasOne(UserProfile, { foreignKey: 'userId' });
-  UserProfile.belongsTo(User, { foreignKey: 'userId' });
-  User.hasMany(Expense, { foreignKey: 'userId' });
-  Expense.belongsTo(User, { foreignKey: 'userId' });
-  User.hasMany(Category, { foreignKey: 'userId' });
-  Category.belongsTo(User, { foreignKey: 'userId' });
-  User.hasMany(Budget, { foreignKey: 'userId' });
-  Budget.belongsTo(User, { foreignKey: 'userId' });
-  Category.hasMany(Expense, { foreignKey: 'categoryId' });
-  Expense.belongsTo(Category, { foreignKey: 'categoryId' });
-  Category.hasMany(Budget, { foreignKey: 'categoryId' });
-  Budget.belongsTo(Category, { foreignKey: 'categoryId' });
-  Expense.belongsToMany(Tag, { through: 'expense_tags', foreignKey: 'expenseId', otherKey: 'tagId' });
-  Tag.belongsToMany(Expense, { through: 'expense_tags', foreignKey: 'tagId', otherKey: 'expenseId' });
-
-  await sequelize.sync({ force: true });
-};
-
-const bcrypt = require('bcryptjs');
 
 const createTestData = async () => {
   const adminPass = await bcrypt.hash('admin123', 10);
@@ -90,8 +58,7 @@ const loginAs = async (email, password) => {
 };
 
 beforeAll(async () => {
-  await initTestDb();
-  await setupModels();
+  await sequelize.sync({ force: true });
   await createTestData();
   app = createApp(typeDefs, resolvers, authMiddleware);
 });

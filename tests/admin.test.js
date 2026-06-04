@@ -43,6 +43,21 @@ describe('Admin', () => {
     });
   });
 
+  describe('viewer restrictions', () => {
+    it('sad: viewer cannot create expenses', async () => {
+      const viewerToken = await loginAs('viewer@test.com', 'viewer123');
+      const catQ = `query { categories { id } }`;
+      const catRes = await executeQuery(catQ, {}, viewerToken);
+      const catId = catRes.data.categories[0]?.id;
+      if (!catId) return;
+
+      const query = `mutation { createExpense(amount: 10, description: "test", date: "2025-06-10", categoryId: "${catId}") { id } }`;
+      const res = await executeQuery(query, {}, viewerToken);
+      expect(res.errors).toBeDefined();
+      expect(res.errors[0].message).toMatch(/Viewers cannot create expenses/i);
+    });
+  });
+
   describe('deleteUser (admin only)', () => {
     it('happy: admin deletes a user', async () => {
       const listQ = `query { users { id email } }`;
@@ -101,18 +116,4 @@ describe('Admin', () => {
     });
   });
 
-  describe('viewer restrictions', () => {
-    it('sad: viewer cannot create expenses', async () => {
-      const viewerToken = await loginAs('viewer@test.com', 'viewer123');
-      const catQ = `query { categories { id } }`;
-      const catRes = await executeQuery(catQ, {}, viewerToken);
-      const catId = catRes.data.categories[0]?.id;
-      if (!catId) return;
-
-      const query = `mutation { createExpense(amount: 10, description: "test", date: "2025-06-10", categoryId: "${catId}") { id } }`;
-      const res = await executeQuery(query, {}, viewerToken);
-      expect(res.errors).toBeDefined();
-      expect(res.errors[0].message).toMatch(/Viewers cannot create expenses/i);
-    });
-  });
 });
