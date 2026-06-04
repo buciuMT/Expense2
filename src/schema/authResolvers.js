@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { User, UserProfile } = require('../models');
-const { signToken } = require('./auth');
+const { signToken } = require('../middleware/auth');
 
 const register = async (_, { name, email, password }) => {
   const existing = await User.findOne({ where: { email } });
