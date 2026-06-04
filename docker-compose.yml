@@ -15,19 +15,37 @@ services:
       timeout: 5s
       retries: 10
 
+  test-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: expense_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
   app:
     build: .
     ports:
       - "4000:4000"
     volumes:
       - ./src:/app/src
+      - ./tests:/app/tests
       - ./package.json:/app/package.json
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/expense_tracker
+      TEST_DATABASE_URL: postgres://postgres:postgres@test-db:5432/expense_test
       JWT_SECRET: expense-tracker-secret-key-2025
       PORT: 4000
     depends_on:
       db:
+        condition: service_healthy
+      test-db:
         condition: service_healthy
 
 volumes:
