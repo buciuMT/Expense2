@@ -6,6 +6,9 @@ const createApp = (typeDefs, resolvers, authMiddleware) => {
   const app = express();
 
   app.use(express.json());
+
+  app.get('/', (req, res) => res.redirect('/graphql'));
+
   app.use(authMiddleware);
 
   const schema = makeExecutableSchema({ typeDefs, resolvers });
